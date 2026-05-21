@@ -1,13 +1,26 @@
 # API Choice
 
-- Étudiant :
-- API choisie :
-- URL base :
-- Documentation officielle / README :
-- Auth : None / API Key / OAuth
+- Étudiant : TechExplorer
+- API choisie : Weatherstack
+- URL base : http://api.weatherstack.com
+- Documentation officielle : https://weatherstack.com/documentation
+- Auth : API Key (`access_key` en query param)
 - Endpoints testés :
-  - GET ...
-  - GET ...
+  - GET /current?access_key=KEY&query=Paris        → météo actuelle ville valide
+  - GET /current?access_key=KEY&query=London       → météo actuelle autre ville
+  - GET /current?access_key=KEY&query=VILLEINVALIDE → réponse d'erreur structurée
+  - GET /current?access_key=MAUVAISTOKEN&query=Paris → erreur 101 (clé invalide)
 - Hypothèses de contrat (champs attendus, types, codes) :
+  - HTTP 200 dans tous les cas (même les erreurs sont dans le JSON)
+  - Succès : champs `request` (object), `location` (object), `current` (object)
+  - `current.temperature` : integer
+  - `current.humidity` : integer (0–100)
+  - `current.weather_descriptions` : list[string] non vide
+  - `current.wind_speed` : integer ou float
+  - Erreur : `{"success": false, "error": {"code": int, "type": str, "info": str}}`
 - Limites / rate limiting connu :
-- Risques (instabilité, downtime, CORS, etc.) :
+  - Free plan : ~100 requêtes/mois
+  - Pas de limite par minute documentée, mais on limite à 1 run/jour max
+- Risques :
+  - HTTPS interdit sur free plan → utiliser HTTP obligatoirement
+  - Quota faible → historique limité (tests manuels ou 1 run/24h)

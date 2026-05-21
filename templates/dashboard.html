@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Dashboard — Weatherstack Monitor</title>
+  <style>
+    :root{
+      --bg:#0b1020; --card:#121a33; --muted:#aab4d4; --text:#e9edff;
+      --accent:#77baff; --ok:#62d6a0; --warn:#ffcc66; --bad:#ff6b7a;
+      --line:#23305c;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:radial-gradient(1200px 600px at 10% 0%,#172257 0%,var(--bg) 60%);
+      color:var(--text);line-height:1.5;}
+    header{max-width:1100px;margin:0 auto;padding:28px 18px 10px;}
+    h1{margin:0 0 6px;font-size:clamp(20px,3vw,32px);}
+    .subtitle{color:var(--muted);font-size:14px;margin:0 0 14px;}
+    .container{max-width:1100px;margin:0 auto;padding:0 18px 40px;}
+    .card{background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.01));
+      border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:20px;margin-bottom:16px;}
+    h2{margin:0 0 14px;font-size:17px;color:var(--accent);}
+    h3{margin:14px 0 8px;font-size:14px;color:#d6dcff;}
+    .kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:4px;}
+    .kbox{padding:14px;border-radius:14px;border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.02);text-align:center;}
+    .kbox .val{font-size:26px;font-weight:700;margin-bottom:4px;}
+    .kbox .lbl{font-size:12px;color:var(--muted);}
+    .ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
+    .pill{display:inline-flex;gap:6px;align-items:center;padding:4px 10px;
+      border-radius:999px;background:rgba(119,186,255,.12);
+      border:1px solid rgba(119,186,255,.28);color:#d9ecff;font-size:12px;}
+    .pill.ok{background:rgba(98,214,160,.12);border-color:rgba(98,214,160,.28);}
+    .pill.bad{background:rgba(255,107,122,.12);border-color:rgba(255,107,122,.28);}
+    table{width:100%;border-collapse:collapse;font-size:13px;}
+    th,td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.07);text-align:left;vertical-align:middle;}
+    th{background:rgba(119,186,255,.08);font-weight:600;color:#d6dcff;}
+    tr:last-child td{border-bottom:none;}
+    code{font-family:ui-monospace,Menlo,monospace;font-size:.88em;
+      background:rgba(255,255,255,.06);padding:2px 6px;border-radius:6px;}
+    a{color:var(--accent);text-decoration:none;}
+    a:hover{text-decoration:underline;}
+    .nav{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:14px;}
+    .btn{display:inline-block;padding:8px 18px;border-radius:12px;font-size:13px;font-weight:600;
+      background:rgba(119,186,255,.18);border:1px solid rgba(119,186,255,.34);
+      color:var(--text);cursor:pointer;text-decoration:none;}
+    .btn:hover{filter:brightness(1.1);text-decoration:none;}
+    .btn.green{background:rgba(98,214,160,.18);border-color:rgba(98,214,160,.34);}
+    .notice{padding:12px 16px;border-radius:12px;border:1px solid rgba(255,204,102,.28);
+      background:rgba(255,204,102,.10);color:#ffe6b3;margin-bottom:16px;font-size:13px;}
+    .hr{height:1px;background:rgba(255,255,255,.08);margin:14px 0;}
+    .empty{color:var(--muted);text-align:center;padding:30px;font-size:14px;}
+  </style>
+</head>
+<body>
+<header>
+  <div class="nav">
+    <span class="pill">Weatherstack Monitor</span>
+    <a href="/" class="pill">📋 Consignes</a>
+    <a href="/health" class="pill">❤️ Health</a>
+    <a href="/export" class="pill">⬇️ Export JSON</a>
+    <a href="/run" class="btn green">▶ Lancer un run</a>
+  </div>
+  <h1>Dashboard — Monitoring Weatherstack</h1>
+  <p class="subtitle">Historique des 20 derniers runs de tests automatisés.</p>
+</header>
+
+<main class="container">
+
+  {% if last %}
+  <!-- ── DERNIER RUN ── -->
+  <div class="card">
+    <h2>⚡ Dernier run — {{ last.timestamp }}</h2>
+    <div class="kpi">
+      <div class="kbox">
+        <div class="val {% if last.summary.passed == last.summary.total %}ok{% elif last.summary.passed >= last.summary.total * 0.75 %}warn{% else %}bad{% endif %}">
+          {{ last.summary.passed }} / {{ last.summary.total }}
+        </div>
+        <div class="lbl">Tests réussis</div>
+      </div>
+      <div class="kbox">
+        <div class="val {% if last.summary.error_rate == 0 %}ok{% elif last.summary.error_rate < 0.3 %}warn{% else %}bad{% endif %}">
+          {{ "%.0f"|format(last.summary.error_rate * 100) }}%
+        </div>
+        <div class="lbl">Taux d'erreur</div>
+      </div>
+      <div class="kbox">
+        <div class="val {% if last.summary.availability >= 0.9 %}ok{% elif last.summary.availability >= 0.7 %}warn{% else %}bad{% endif %}">
+          {{ "%.0f"|format(last.summary.availability * 100) }}%
+        </div>
+        <div class="lbl">Disponibilité</div>
+      </div>
+      <div class="kbox">
+        <div class="val {% if last.summary.latency_ms_avg < 800 %}ok{% elif last.summary.latency_ms_avg < 2000 %}warn{% else %}bad{% endif %}">
+          {{ last.summary.latency_ms_avg }} ms
+        </div>
+        <div class="lbl">Latence moyenne</div>
+      </div>
+      <div class="kbox">
+        <div class="val {% if last.summary.latency_ms_p95 < 1500 %}ok{% elif last.summary.latency_ms_p95 < 2500 %}warn{% else %}bad{% endif %}">
+          {{ last.summary.latency_ms_p95 }} ms
+        </div>
+        <div class="lbl">Latence p95</div>
+      </div>
+    </div>
+
+    <div class="hr"></div>
+
+    <h3>Détail des tests</h3>
+    <table>
+      <thead>
+        <tr><th>Test</th><th>Statut</th><th>Latence</th><th>Détails</th></tr>
+      </thead>
+      <tbody>
+        {% for t in last.tests %}
+        <tr>
+          <td>{{ t.name }}</td>
+          <td>
+            {% if t.status == "PASS" %}
+              <span class="pill ok">✓ PASS</span>
+            {% elif t.status == "FAIL" %}
+              <span class="pill bad">✗ FAIL</span>
+            {% else %}
+              <span class="pill">⚠ ERROR</span>
+            {% endif %}
+          </td>
+          <td>{{ t.latency_ms }} ms</td>
+          <td><code>{{ t.details }}</code></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="notice">
+    Aucun run enregistré. Cliquez sur <strong>▶ Lancer un run</strong> pour démarrer.
+  </div>
+  {% endif %}
+
+  <!-- ── HISTORIQUE ── -->
+  <div class="card">
+    <h2>📜 Historique des runs</h2>
+    {% if runs %}
+    <table>
+      <thead>
+        <tr>
+          <th>#</th><th>Timestamp</th><th>Passés/Total</th>
+          <th>Erreurs</th><th>Dispo</th><th>Lat. moy.</th><th>p95</th><th>Détail</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in runs %}
+        <tr>
+          <td>{{ r.id }}</td>
+          <td>{{ r.timestamp }}</td>
+          <td class="{% if r.passed == 8 %}ok{% elif r.passed >= 6 %}warn{% else %}bad{% endif %}">
+            {{ r.passed }} / {{ r.passed + r.failed + r.errors }}
+          </td>
+          <td class="{% if r.error_rate == 0 %}ok{% elif r.error_rate < 0.3 %}warn{% else %}bad{% endif %}">
+            {{ "%.0f"|format(r.error_rate * 100) }}%
+          </td>
+          <td class="{% if r.availability >= 0.9 %}ok{% elif r.availability >= 0.7 %}warn{% else %}bad{% endif %}">
+            {{ "%.0f"|format(r.availability * 100) }}%
+          </td>
+          <td>{{ r.latency_avg }} ms</td>
+          <td>{{ r.latency_p95 }} ms</td>
+          <td><a href="/dashboard/run/{{ r.id }}">JSON ↗</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="empty">Aucun run dans l'historique.</p>
+    {% endif %}
+  </div>
+
+</main>
+</body>
+</html>
